@@ -60,8 +60,8 @@ var AMF = (function(){var AMF = {
 
   hexDump: function(v, log) {
     var r = '';
-    var byte = function(v, i) {
-      return ('00' + new DataView(v).getUint8(i).toString(16)).substr(-2) + ' ';
+    var byte = function(v) {
+      return ('00' + v.toString(16)).substr(-2) + ' ';
     };
     switch (typeof v) {
       case 'string':
@@ -79,9 +79,14 @@ var AMF = (function(){var AMF = {
           break;
         }
         switch (v.constructor.name) {
+          case 'Uint8Array':
+            for (var i=0; i<v.length; i++) {
+              r += byte(v[i]);
+            }
+            break;
           case 'ArrayBuffer':
             for (var i=0; i<v.byteLength; i++) {
-              r += byte(v, i);
+              r += byte(new DataView(v).getUint8(i));
             }
             break;
           default:
@@ -158,21 +163,22 @@ var AMF = (function(){var AMF = {
       return result;
     };
 
+    var stringReferences = [];
     var readString = function() {
       var reference = readInt();
-
-      if ((reference & AMF.REFERENCE_BIT) === 0) {
+      if (0 === (reference & AMF.REFERENCE_BIT)) {
         reference >>= AMF.REFERENCE_BIT;
-
-        return this.referenceStore.getByReference(reference, ReferenceStore.TYPE_STRING);
+        return stringReferences[reference];
       }
 
       var length = reference >> AMF.REFERENCE_BIT;
-      var string = utf8.decode(this.stream.readRawBytes(length));
-      this.referenceStore.addReference(string, ReferenceStore.TYPE_STRING);
-
+      var data = new Uint8Array(buf, pos, length);
+      var string = decodeURIComponent(AMF.hexDump(data).replace(/\s+/g, '').replace(/[0-9a-f]{2}/g, '%$&'));
+      stringReferences.push(string);
       return string;
     };
+
+    var objectReferences = [];
   }
 };
 
