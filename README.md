@@ -1,10 +1,14 @@
 # AMF.JS
 
-This project uses the modern Javascript Typed Array specification (e.g, ByteArray, U8intArray, DataView, etc.).
+This project uses the modern Javascript Typed Array specification (e.g, ArrayBuffer, U8intArray, DataView, etc.).
 
 Designed for browsers or Node.JS.
 
 ## Errata
+
+### Inspiration
+
+- [infomaniac-amf/js](https://github.com/infomaniac-amf/js)
 
 ### Everything you need to know about the data structure:
 

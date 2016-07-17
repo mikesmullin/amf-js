@@ -4,16 +4,17 @@ const assert = require('chai').assert;
 const AMF = require('../src/amf.js');
 
 describe('Array', () => {
-  describe('#indexOf()', () => {
-    it('should return -1 when the value is not present', () => {
-      assert.equal(-1, [1,2,3].indexOf(5));
-      assert.equal(-1, [1,2,3].indexOf(0));
-    });
-  });
-
   describe("amf.js", () => {
-    it("has a class", () => {
-      AMF.hi();
+    it('can parse integer 6', () => {
+      let buf = AMF.makeArrayBuffer([0x04, 0x06]);
+      let d = new AMF.Deserializer(buf);
+      assert.equal(d.deserialize(), 6);
+    });
+
+    it('can parse string "hi"', () => {
+      let buf = AMF.makeArrayBuffer([0x06, 0x05, 0x68, 0x69]);
+      let d = new AMF.Deserializer(buf);
+      assert.equal(d.deserialize(), "hi");
     });
   });
 });
