@@ -19,17 +19,17 @@ var AMF = (function(){var AMF = {
   AMF3_INT: 0x04,
   AMF3_DOUBLE: 0x05,
   AMF3_STRING: 0x06,
-  AMF3_XML_DOC: 0x07,
-  AMF3_DATE: 0x08,
-  AMF3_ARRAY: 0x09,
+  AMF3_XML_DOC: 0x07, // not implemented
+  AMF3_DATE: 0x08, // not implemented
+  AMF3_ARRAY: 0x09, // not implemented
   AMF3_OBJECT: 0x0A,
-  AMF3_XML: 0x0B,
+  AMF3_XML: 0x0B, // not implemented
   AMF3_BYTE_ARRAY: 0x0C,
-  AMF3_VECTOR_INT: 0x0D,
-  AMF3_VECTOR_UINT: 0x0E,
-  AMF3_VECTOR_DOUBLE: 0x0F,
-  AMF3_VECTOR_OBJECT: 0x10,
-  AMF3_DICTIONARY: 0x11,
+  AMF3_VECTOR_INT: 0x0D, // not implemented
+  AMF3_VECTOR_UINT: 0x0E, // not implemented
+  AMF3_VECTOR_DOUBLE: 0x0F, // not implemented
+  AMF3_VECTOR_OBJECT: 0x10, // not implemented
+  AMF3_DICTIONARY: 0x11, // not implemented
 
 
   // Miscellaneous
@@ -50,10 +50,11 @@ var AMF = (function(){var AMF = {
 
   // @param a:ArrayBuffer - bytes
   //   ex: [0x06, 0x05, 0x68, 0x69] // "hi"
-  makeArrayBuffer: function(a) {
-    var a2 = new Uint8Array(a.length);
-    for (var i=0; i<a.length; i++) {
-      a2[i] = a[i];
+  makeArrayBuffer: function(s) {
+    s = s.replace(/\s+/g, '');
+    var a2 = new Uint8Array(s.length/2);
+    for (var i=0; i<s.length/2; i++) {
+      a2[i] = parseInt(s.substr(i*2,2), 16);
     }
     return a2.buffer;
   },
@@ -105,10 +106,8 @@ var AMF = (function(){var AMF = {
 
   // Deserialization
 
-  Deserializer: function(arrayBuffer) {
-    var buf = arrayBuffer;
+  deserialize: function(buf) {
     var pos = 0;
-    var _this = this;
 
     var readByte = function() {
       return new DataView(buf)
@@ -120,30 +119,6 @@ var AMF = (function(){var AMF = {
         throw new Error("expected "+ AMF.hexDump(expected) +", "+
           "but got "+ AMF.hexDump(actual) +
           " at position "+ (pos - 1) +".");
-    };
-
-    this.deserialize = function() {
-      var b = readByte();
-      switch (b) {
-        case AMF.AMF3_UNDEFINED:
-          return undefined;
-        case AMF.AMF3_NULL:
-          return null;
-        case AMF.AMF3_FALSE:
-          return false;
-        case AMF.AMF3_TRUE:
-          return true;
-        case AMF.AMF3_INT:
-          return readInt();
-        case AMF.AMF3_DOUBLE:
-          return readDouble();
-        case AMF.AMF3_STRING:
-          return readString();
-        case AMF.AMF3_OBJECT:
-          return readObject();
-        default:
-          throw new Error("Unrecognized type marker "+ AMF.hexDump(b) +". Cannot proceed with deserialization.");
-      }
     };
 
     var readInt = function() {
@@ -226,7 +201,7 @@ var AMF = (function(){var AMF = {
       var data = {};
       var property = readString();
       while (property.length) {
-        data[property] = _this.deserialize();
+        data[property] = deserialize();
         property = readString();
       }
 
@@ -250,6 +225,32 @@ var AMF = (function(){var AMF = {
 
       return instance;
     };
+
+    var deserialize = function() {
+      var b = readByte();
+      switch (b) {
+        case AMF.AMF3_UNDEFINED:
+          return undefined;
+        case AMF.AMF3_NULL:
+          return null;
+        case AMF.AMF3_FALSE:
+          return false;
+        case AMF.AMF3_TRUE:
+          return true;
+        case AMF.AMF3_INT:
+          return readInt();
+        case AMF.AMF3_DOUBLE:
+          return readDouble();
+        case AMF.AMF3_STRING:
+          return readString();
+        case AMF.AMF3_OBJECT:
+          return readObject();
+        default:
+          throw new Error("Unrecognized type marker "+ AMF.hexDump(b) +". Cannot proceed with deserialization.");
+      }
+    }
+
+    return deserialize();
   }
 };
 
