@@ -20,8 +20,8 @@ var AMF = (function(){var AMF = {
   AMF3_DOUBLE: 0x05,
   AMF3_STRING: 0x06,
   AMF3_XML_DOC: 0x07, // not implemented
-  AMF3_DATE: 0x08, // not implemented
-  AMF3_ARRAY: 0x09, // not implemented
+  AMF3_DATE: 0x08,
+  AMF3_ARRAY: 0x09,
   AMF3_OBJECT: 0x0A,
   AMF3_XML: 0x0B, // not implemented
   AMF3_BYTE_ARRAY: 0x0C,
@@ -34,16 +34,7 @@ var AMF = (function(){var AMF = {
 
   // Miscellaneous
 
-  OBJECT_DYNAMIC: 0x00,
-
   REFERENCE_BIT: 0x01,
-
-  MIN_2_BYTE_INT: 0x80,
-  MIN_3_BYTE_INT: 0x4000,
-  MIN_4_BYTE_INT: 0x200000,
-
-  MAX_INT: 0xFFFFFFF,      // (2 ^ 28) - 1
-  MIN_INT: -0x10000000,     // (-2 ^ 28)
 
 
   // Debugging
@@ -172,6 +163,41 @@ var AMF = (function(){var AMF = {
     };
 
     var objectReferences = [];
+    var readDate = function() {
+      var reference = readInt();
+      if (0 === (reference & AMF.REFERENCE_BIT)) {
+        reference >>= AMF.REFERENCE_BIT;
+        return objectReferences[reference];
+      }
+      var millisSinceEpoch = readDouble();
+      var date = new Date(millisSinceEpoch);
+      objectReferences.push(date);
+      return date;
+    };
+
+    var readArray = function() {
+      var reference = readInt();
+      if (0 === (reference & AMF.REFERENCE_BIT)) {
+        reference >>= AMF.REFERENCE_BIT;
+        return objectReferences[reference];
+      }
+      var size = reference >> AMF.REFERENCE_BIT;
+      var arr = [];
+      objectReferences.push(arr);
+
+      var key = readString();
+      while (key.length > 0) {
+        arr[key] = deserialize();
+        key = readString();
+      }
+
+      for (var i=0; i<size; i++) {
+        arr.push(deserialize());
+      }
+
+      return arr;
+    };
+
     var clsAliases = {};
     var merge = function(instance, data) {
       try {
@@ -243,6 +269,10 @@ var AMF = (function(){var AMF = {
           return readDouble();
         case AMF.AMF3_STRING:
           return readString();
+        case AMF.AMF3_DATE:
+          return readDate();
+        case AMF.AMF3_ARRAY:
+          return readArray();
         case AMF.AMF3_OBJECT:
           return readObject();
         default:

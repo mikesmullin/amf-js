@@ -22,8 +22,6 @@ describe('Array', () => {
 
     it('can parse dynamic object { him: 3 }', () => {
       let buf = AMF.makeArrayBuffer('0a 0b 01 07 68 69 6d 04 03 01');
-      console.log(
-      'buf', buf);
       assert.deepEqual(AMF.deserialize(buf), { him: 3 });
     });
 
@@ -55,6 +53,19 @@ describe('Array', () => {
     it('can parse double 15.24', () => {
       let buf = AMF.makeArrayBuffer('05 40 2e 7a e1 47 ae 14 7b');
       assert.equal(AMF.deserialize(buf), 15.24);
+    });
+
+    it('can parse date', () => {
+      let buf = AMF.makeArrayBuffer('08 01 42 75 5f a3 77 83 20 00');
+      let d = AMF.deserialize(buf);
+      assert.equal(typeof d, 'object');
+      assert.equal(d.constructor.name, 'Date');
+      assert.equal(d.getTime(), 1468781787186);
+    });
+
+    it('can parse array', () => {
+      let buf = AMF.makeArrayBuffer('09 09 01 04 01 04 02 04 03 04 04');
+      assert.deepEqual(AMF.deserialize(buf), [1,2,3,4]);
     });
   });
 });
