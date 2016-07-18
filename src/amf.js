@@ -13,17 +13,17 @@ var AMF = (function(){var AMF = {
   AMF3_INT: 0x04,
   AMF3_DOUBLE: 0x05,
   AMF3_STRING: 0x06,
-  AMF3_XML_DOC: 0x07, // not implemented
+  AMF3_XML_DOC: 0x07,
   AMF3_DATE: 0x08,
   AMF3_ARRAY: 0x09,
   AMF3_OBJECT: 0x0A,
-  AMF3_XML: 0x0B, // not implemented
+  AMF3_XML: 0x0B,
   AMF3_BYTE_ARRAY: 0x0C,
-  AMF3_VECTOR_INT: 0x0D, // not implemented
-  AMF3_VECTOR_UINT: 0x0E, // not implemented
-  AMF3_VECTOR_DOUBLE: 0x0F, // not implemented
-  AMF3_VECTOR_OBJECT: 0x10, // not implemented
-  AMF3_DICTIONARY: 0x11, // not implemented
+  AMF3_VECTOR_INT: 0x0D,
+  AMF3_VECTOR_UINT: 0x0E,
+  AMF3_VECTOR_DOUBLE: 0x0F,
+  AMF3_VECTOR_OBJECT: 0x10,
+  AMF3_DICTIONARY: 0x11,
 
 
   // Debugging
@@ -66,8 +66,9 @@ var AMF = (function(){var AMF = {
             }
             break;
           case 'ArrayBuffer':
+            var dv = new DataView(v);
             for (var i=0; i<v.byteLength; i++) {
-              r += byte(new DataView(v).getUint8(i));
+              r += byte(dv.getUint8(i));
             }
             break;
           default:
@@ -152,14 +153,15 @@ var AMF = (function(){var AMF = {
     var readString = function() {
       if (isReference(stringReferences)) return ref;
       var length = flags; // remaining bits are uint
-      var data = new Uint8Array(buf, pos, length);
-      var string = decodeURIComponent(
-        AMF.hexDump(data).replace(/\s+/g, '')
-          .replace(/[0-9a-f]{2}/g, '%$&'));
+      var string = '';
       if (length > 0) {
+        var bytes = new Uint8Array(buf, pos, length);
+        string = decodeURIComponent(
+          AMF.hexDump(bytes).replace(/\s+/g, '')
+            .replace(/[0-9a-f]{2}/g, '%$&'));
+        pos += length;
         stringReferences.push(string);
       }
-      pos += length;
       return string;
     };
 
@@ -260,6 +262,22 @@ var AMF = (function(){var AMF = {
       return instance;
     };
 
+    var readByteArray = function() {
+      if (isReference(objectReferences)) return ref;
+      var length = flags; // remaining bits are uint
+      var bytes = new ArrayBuffer(length);
+      if (length > 0) {
+        var dv = new DataView(bytes);
+        for (var i=0; i<length; i++) {
+          dv.setUint8(i, readByte());
+        }
+        objectReferences.push(bytes);
+      }
+      // this Uint8Array isn't necessary but is
+      // nicer for console.log() and JSON.stringify()
+      return new Uint8Array(bytes);
+    };
+
     var deserialize = function() {
       var b = readByte();
       switch (b) {
@@ -277,12 +295,28 @@ var AMF = (function(){var AMF = {
           return readDouble();
         case AMF.AMF3_STRING:
           return readString();
+        case AMF.AMF3_XML_DOC:
+          throw new Error("xml-doc-marker value-type not implemented.");
         case AMF.AMF3_DATE:
           return readDate();
         case AMF.AMF3_ARRAY:
           return readArray();
         case AMF.AMF3_OBJECT:
           return readObject();
+        case AMF.AMF3_XML:
+          throw new Error("xml-marker value-type not implemented.");
+        case AMF.AMF3_BYTE_ARRAY:
+          return readByteArray();
+        case AMF.AMF3_VECTOR_INT:
+          throw new Error("vector-int-marker value-type not implemented.");
+        case AMF.AMF3_VECTOR_UINT:
+          throw new Error("vector-uint-marker value-type not implemented.");
+        case AMF.AMF3_VECTOR_DOUBLE:
+          throw new Error("vector-double-marker value-type not implemented.");
+        case AMF.AMF3_VECTOR_OBJECT:
+          throw new Error("vector-object-marker value-type not implemented.");
+        case AMF.AMF3_DICTIONARY:
+          throw new Error("dictionary-marker value-type not implemented.");
         default:
           throw new Error("Unrecognized type marker "+ AMF.hexDump(b) +". Cannot proceed with deserialization.");
       }
