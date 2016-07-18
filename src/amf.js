@@ -4,12 +4,6 @@ var tH = function(i) { return i.toString(16); }; // from Uint to Hex String
 var fH = function(s) { return parseInt(s,16); }; // from Hex String to Uint
 
 var AMF = (function(){var AMF = {
-  // Values according to the DataView.set*() API.
-
-  LITTLE_ENDIAN: true,
-  BIG_ENDIAN: false,
-
-
   // Type Markers
 
   // These markers also represent a value.
@@ -35,11 +29,6 @@ var AMF = (function(){var AMF = {
   AMF3_VECTOR_DOUBLE: 0x0F, // not implemented
   AMF3_VECTOR_OBJECT: 0x10, // not implemented
   AMF3_DICTIONARY: 0x11, // not implemented
-
-
-  // Miscellaneous
-
-  REFERENCE_BIT: 0x01,
 
 
   // Debugging
@@ -104,6 +93,25 @@ var AMF = (function(){var AMF = {
 
   deserialize: function(buf) {
     var pos = 0;
+    var flags = 0;
+    var ref = null;
+
+    var isReference = function(map) {
+      ref = null;
+      flags = readInt();
+      var isRef = !popFlag();
+      if (isRef) {
+        var index = flags; // remaining bits are uint
+        ref = map[index];
+      }
+      return isRef;
+    };
+
+    var popFlag = function() {
+      var r = !!(flags & 1);
+      flags >>= 1;
+      return r;
+    };
 
     var readByte = function() {
       return new DataView(buf)
@@ -137,20 +145,15 @@ var AMF = (function(){var AMF = {
 
     var readDouble = function() {
       var f = new DataView(buf)
-        .getFloat64(pos, AMF.BIG_ENDIAN);
+        .getFloat64(pos, false); // big endian
       pos += 8;
       return f;
     };
 
     var stringReferences = [];
     var readString = function() {
-      var reference = readInt();
-      if (0 === (reference & AMF.REFERENCE_BIT)) {
-        reference >>= AMF.REFERENCE_BIT;
-        s = stringReferences[reference];
-        return s;
-      }
-      var length = reference >> AMF.REFERENCE_BIT;
+      if (isReference(stringReferences)) return ref;
+      var length = flags; // remaining bits are uint
       var data = new Uint8Array(buf, pos, length);
       var string = decodeURIComponent(
         AMF.hexDump(data).replace(/\s+/g, '')
@@ -164,11 +167,7 @@ var AMF = (function(){var AMF = {
 
     var objectReferences = [];
     var readDate = function() {
-      var reference = readInt();
-      if (0 === (reference & AMF.REFERENCE_BIT)) {
-        reference >>= AMF.REFERENCE_BIT;
-        return objectReferences[reference];
-      }
+      if (isReference(objectReferences)) return ref;
       var millisSinceEpoch = readDouble();
       var date = new Date(millisSinceEpoch);
       objectReferences.push(date);
@@ -176,12 +175,8 @@ var AMF = (function(){var AMF = {
     };
 
     var readArray = function() {
-      var reference = readInt();
-      if (0 === (reference & AMF.REFERENCE_BIT)) {
-        reference >>= AMF.REFERENCE_BIT;
-        return objectReferences[reference];
-      }
-      var size = reference >> AMF.REFERENCE_BIT;
+      if (isReference(objectReferences)) return ref;
+      var size = flags; // remaining bits are uint
       var arr = [];
       objectReferences.push(arr);
 
@@ -202,26 +197,17 @@ var AMF = (function(){var AMF = {
     var clsNameMap = {};
     var readObject = function() {
       // U29 ; traits, reference, static member count
-      var traits = readInt();
-      var popBitFlag = function() {
-        var r = !!(traits & 1);
-        traits >>= 1;
-        return r;
-      }
-      var objectReference = !popBitFlag();
-      if (objectReference) {
-        var referenceIndex = traits; // remaining bits are uint
-        return objectReferences[referenceIndex];
-      } // only object instances beyond here
+      if (isReference(objectReferences)) return ref;
+      // only object instances beyond here
 
-      var traitReference = !popBitFlag();
+      var traitReference = !popFlag();
       if (traitReference) {
-        var traitReferenceIndex = traits; // remaining bits are uint
-        traits = traitReferences[traitReferenceIndex];
+        var traitReferenceIndex = flags; // remaining bits are uint
+        flags = traitReferences[traitReferenceIndex];
       }
-      traitReferences.push(traits); // TODO: may need to save more in here, like the static member names
+      traitReferences.push(flags); // TODO: may need to save more in here, like the static member names
 
-      var externalSerialization = popBitFlag();
+      var externalSerialization = popFlag();
       if (externalSerialization) {
         throw new Error("External class serialization not supported at present.");
 
@@ -241,10 +227,11 @@ var AMF = (function(){var AMF = {
         //  }
         //}
         //return someObjectCreatedExternally;
-      } // only non-external beyond here
+      }
+      // only non-external beyond here
 
-      var dynamicObject = popBitFlag();
-      var sealedMemberCount = traits; // remaining bits are unit
+      var dynamicObject = popFlag();
+      var sealedMemberCount = flags; // remaining bits are unit
 
       var clsName = readString();
 
@@ -270,8 +257,7 @@ var AMF = (function(){var AMF = {
         var property = readString();
         console.log({
           pos: pos,
-          objectReference: objectReference,
-          referenceIndex: referenceIndex,
+          objectReference: ref,
           traitReference: traitReference,
           traitReferenceIndex: traitReferenceIndex,
           externalSerialization: externalSerialization,
