@@ -78,10 +78,9 @@ describe('Array', () => {
       assert.deepEqual(AMF.deserialize(buf), [1,2,3,4]);
     });
 
-    it('can parse self-referencing object', () => {
+    it.only('can parse self-referencing object', () => {
       let buf = AMF.makeArrayBuffer(
         '0a 0b 01 03 65 0a 01 03 63 04 03 01 09 73 65 6c 660a000361040103640a01036204020101');
-      debugger;
       assert.deepEqual(AMF.deserialize(buf), {});
     });
 

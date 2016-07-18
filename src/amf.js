@@ -91,9 +91,11 @@ var AMF = (function(){var AMF = {
     var flags = 0;
     var ref = null;
 
-    var isReference = function(map) {
+    var isReference = function(map, dontReadIntFirst) {
       ref = null;
-      flags = readInt();
+      if (!dontReadIntFirst) {
+        flags = readInt();
+      }
       var isRef = !popFlag();
       if (isRef) {
         var index = flags; // remaining bits are uint
@@ -191,16 +193,13 @@ var AMF = (function(){var AMF = {
     var traitReferences = [];
     var clsNameMap = {};
     var readObject = function() {
-      // U29 ; traits, reference, static member count
+      debugger;
       if (isReference(objectReferences)) return ref;
       // only object instances beyond here
 
-      var traitReference = !popFlag();
-      if (traitReference) {
-        var traitReferenceIndex = flags; // remaining bits are uint
-        flags = traitReferences[traitReferenceIndex];
-      }
-      traitReferences.push(flags); // TODO: may need to save more in here, like the static member names
+      var traits;
+      if (isReference(traitReferences, true)) traits = flags = ref;
+      else traitReferences.push(traits); // TODO: may need to save more in here, like the static member names
 
       var externalSerialization = popFlag();
       if (externalSerialization) {
@@ -253,8 +252,7 @@ var AMF = (function(){var AMF = {
         console.log({
           pos: pos,
           objectReference: ref,
-          traitReference: traitReference,
-          traitReferenceIndex: traitReferenceIndex,
+          traits: traits,
           externalSerialization: externalSerialization,
           dynamicObject: dynamicObject,
           sealedMemberCount: sealedMemberCount,
@@ -263,6 +261,7 @@ var AMF = (function(){var AMF = {
           instance: instance,
           property: property
         });
+        // key value pairs
         while (property.length) {
           instance[property] = deserialize();
           property = readString();
