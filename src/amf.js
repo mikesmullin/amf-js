@@ -1,8 +1,3 @@
-var tB = function(i) { return i.toString(2).replace(/[01]{8}/g, ' $&'); }; // from Uint to Binary String
-var fB = function(s) { return parseInt(s.replace(/\s+/g, ''), 2); }; // from Binary String to Uint
-var tH = function(i) { return i.toString(16); }; // from Uint to Hex String
-var fH = function(s) { return parseInt(s,16); }; // from Hex String to Uint
-
 var AMF = (function(){var AMF = {
   // Type Markers
 
