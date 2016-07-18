@@ -1,4 +1,9 @@
-module.exports = (function(){
+(function(ctx, def) {
+  if ('function' === typeof require && typeof exports === typeof module) {
+    return module.exports = def;
+  }
+  return ctx.AMF = def;
+})(this, (function() {
 
   // Type Markers
 
@@ -329,4 +334,4 @@ module.exports = (function(){
   }
 
   return AMF;
-})();
+})());
