@@ -1,3 +1,8 @@
+var tB = function(i) { return i.toString(2).replace(/[01]{8}/g, ' $&'); }; // from Uint to Binary String
+var fB = function(s) { return parseInt(s.replace(/\s+/g, ''), 2); }; // from Binary String to Uint
+var tH = function(i) { return i.toString(16); }; // from Uint to Hex String
+var fH = function(s) { return parseInt(s,16); }; // from Hex String to Uint
+
 var AMF = (function(){var AMF = {
   // Values according to the DataView.set*() API.
 
@@ -112,26 +117,21 @@ var AMF = (function(){var AMF = {
           " at position "+ (pos - 1) +".");
     };
 
+    // Variable-Length Unsigned 29-bit Integer Encoding
     var readInt = function() {
-      var result = 0;
-      var n = 0;
-      var b = readByte();
-      while ((b & 0x80) !== 0 && n < 3) {
+      var result = 0, varLen = 0;
+      while (((b = readByte()) & 0x80) !== 0 && varLen++ < 3) {
         result <<= 7;
         result |= (b & 0x7F);
-        b = readByte();
-        n++;
       }
-      if (n < 3) {
-        result <<= 7;
-        result |= b;
-      } else {
-        result <<= 8;
-        result |= b;
-        if ((result & 0x10000000) !== 0) {
-          result |= 0xE0000000;
-        }
-      }
+      // NOTICE: the docs claim the maximum range of U29 is 2^29-1
+      //         but after testing AS3 its clear the implementation
+      //         limit is actually 2^28-1. probably they leave room
+      //         in the 4th octet for a flag, when they don't need to.
+      //         our implementation will correctly support larger numbers,
+      //         even though it will probably never receive any.
+      result <<= (varLen < 3 ? 7: 8);
+      result |= b;
       return result;
     };
 
@@ -198,55 +198,94 @@ var AMF = (function(){var AMF = {
       return arr;
     };
 
-    var clsAliases = {};
-    var merge = function(instance, data) {
-      try {
-        for (var key in data) {
-          var val = data[key];
-          instance[key] = val;
-        }
-      } catch(e) {
-        // some properties may not be public
-        throw new Error("Property '" + key + "' cannot be set on instance '" + (typeof instance) + "'");
-      }
-    };
+    var traitReferences = [];
+    var clsNameMap = {};
     var readObject = function() {
-      var reference = readInt();
-      if (0 === (reference & AMF.REFERENCE_BIT)) {
-        reference >>= AMF.REFERENCE_BIT;
-        return objectReferences[reference];
+      // U29 ; traits, reference, static member count
+      var traits = readInt();
+      var popBitFlag = function() {
+        var r = !!(traits & 1);
+        traits >>= 1;
+        return r;
       }
+      var objectReference = !popBitFlag();
+      if (objectReference) {
+        var referenceIndex = traits; // remaining bits are uint
+        return objectReferences[referenceIndex];
+      } // only object instances beyond here
 
-      var clsAlias = readString();
+      var traitReference = !popBitFlag();
+      if (traitReference) {
+        var traitReferenceIndex = traits; // remaining bits are uint
+        traits = traitReferences[traitReferenceIndex];
+      }
+      traitReferences.push(traits); // TODO: may need to save more in here, like the static member names
+
+      var externalSerialization = popBitFlag();
+      if (externalSerialization) {
+        throw new Error("External class serialization not supported at present.");
+
+        //// when clsName is given, initialization of an existing type is implied
+        //if (clsName && clsName.length > 0) {
+        //  var classType = clsNameMap[clsName];
+        //  if (!classType) {
+        //    throw new Error('Class ' + clsName + ' cannot be found. Consider registering a class alias.');
+        //  }
+        //  instance = new classType;
+        //  if ('importData' in instance &&
+        //    'function' == typeof instance.importData)
+        //  {
+        //    instance.importData(data);
+        //  } else {
+        //    merge(instance, data);
+        //  }
+        //}
+        //return someObjectCreatedExternally;
+      } // only non-external beyond here
+
+      var dynamicObject = popBitFlag();
+      var sealedMemberCount = traits; // remaining bits are unit
+
+      var clsName = readString();
 
       // add a new reference at this stage - essential to handle self-referencing objects
       var instance = {};
       objectReferences.push(instance);
 
-      // collect all properties into hash
-      var data = {};
-      var property = readString();
-      while (property.length) {
-        data[property] = deserialize();
-        property = readString();
+      if (sealedMemberCount > 0) {
+        // collect sealed members
+        // list of names first
+        var sealedMemberNames = [];
+        for (var i=0; i<sealedMemberCount; i++) {
+          sealedMemberNames.push(readString());
+        }
+        // then list of values
+        for (var i=0; i<sealedMemberCount; i++) {
+          instance[sealedMemberNames[i]] = deserialize();
+        }
       }
 
-      // when clsAlias is given, initialization of an existing type is implied
-      if (clsAlias && clsAlias.length > 0) {
-        var classType = clsAliases[clsAlias];
-        if (!classType) {
-          throw new Error('Class ' + clsAlias + ' cannot be found. Consider registering a class alias.');
+      if (dynamicObject) {
+        // collect dynamic members
+        var property = readString();
+        console.log({
+          pos: pos,
+          objectReference: objectReference,
+          referenceIndex: referenceIndex,
+          traitReference: traitReference,
+          traitReferenceIndex: traitReferenceIndex,
+          externalSerialization: externalSerialization,
+          dynamicObject: dynamicObject,
+          sealedMemberCount: sealedMemberCount,
+          clsName: clsName,
+          sealedMemberNames: sealedMemberNames,
+          instance: instance,
+          property: property
+        });
+        while (property.length) {
+          instance[property] = deserialize();
+          property = readString();
         }
-        instance = new classType;
-        if ('importData' in instance &&
-          'function' == typeof instance.importData)
-        {
-          instance.importData(data);
-        } else {
-          merge(instance, data);
-        }
-      } else {
-        merge(instance, data);
       }
 
       return instance;
