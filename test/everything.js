@@ -78,10 +78,17 @@ describe('Array', () => {
       assert.deepEqual(AMF.deserialize(buf), [1,2,3,4]);
     });
 
-    it.only('can parse self-referencing object', () => {
+    it('can parse self-referencing object', () => {
       let buf = AMF.makeArrayBuffer(
-        '0a 0b 01 03 65 0a 01 03 63 04 03 01 09 73 65 6c 660a000361040103640a01036204020101');
-      assert.deepEqual(AMF.deserialize(buf), {});
+        '0a 0b 01 09 6e 75 6d 31 04 01 09 6f 62 6a 32 0a 01 09 6e 75 6d 32 04 02010973656c660a0001');
+      var o = {
+        num1: 1,
+        obj2: {
+          num2: 2
+        }
+      }
+      o.self = o;
+      assert.deepEqual(AMF.deserialize(buf), o);
     });
 
     it('can be useful for my own purposes', () => {

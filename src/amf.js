@@ -111,8 +111,9 @@ var AMF = (function(){var AMF = {
     };
 
     var readByte = function() {
-      return new DataView(buf)
+      var b = new DataView(buf)
         .getUint8(pos++, 1);
+      return b;
     };
 
     var assert = function(expected, actual) {
@@ -193,74 +194,62 @@ var AMF = (function(){var AMF = {
     var traitReferences = [];
     var clsNameMap = {};
     var readObject = function() {
-      debugger;
       if (isReference(objectReferences)) return ref;
       // only object instances beyond here
-
-      var traits;
-      if (isReference(traitReferences, true)) traits = flags = ref;
-      else traitReferences.push(traits); // TODO: may need to save more in here, like the static member names
-
-      var externalSerialization = popFlag();
-      if (externalSerialization) {
-        throw new Error("External class serialization not supported at present.");
-
-        //// when clsName is given, initialization of an existing type is implied
-        //if (clsName && clsName.length > 0) {
-        //  var classType = clsNameMap[clsName];
-        //  if (!classType) {
-        //    throw new Error('Class ' + clsName + ' cannot be found. Consider registering a class alias.');
-        //  }
-        //  instance = new classType;
-        //  if ('importData' in instance &&
-        //    'function' == typeof instance.importData)
-        //  {
-        //    instance.importData(data);
-        //  } else {
-        //    merge(instance, data);
-        //  }
-        //}
-        //return someObjectCreatedExternally;
-      }
-      // only non-external beyond here
-
-      var dynamicObject = popFlag();
-      var sealedMemberCount = flags; // remaining bits are unit
-
-      var clsName = readString();
-
-      // add a new reference at this stage - essential to handle self-referencing objects
       var instance = {};
       objectReferences.push(instance);
 
-      if (sealedMemberCount > 0) {
-        // collect sealed members
-        // list of names first
-        var sealedMemberNames = [];
-        for (var i=0; i<sealedMemberCount; i++) {
-          sealedMemberNames.push(readString());
+      // flag operation order is important here
+      var traits;
+      var isTraitReference = isReference(traitReferences, true);
+      if (isTraitReference) {
+        traits = ref;
+      } else {
+        traits = {
+          isExternallySerialized: popFlag(),
+          isDynamicObject: popFlag(),
+          sealedMemberCount: flags, // remaining bits are unit
+          clsName: readString(),
+          sealedMemberNames: []
+        };
+        traitReferences.push(traits);
+
+        if (traits.isExternallySerialized) {
+          throw new Error("External class serialization not supported at present.");
+
+          //// when clsName is given, initialization of an existing type is implied
+          //if (clsName && clsName.length > 0) {
+          //  var classType = clsNameMap[clsName];
+          //  if (!classType) {
+          //    throw new Error('Class ' + clsName + ' cannot be found. Consider registering a class alias.');
+          //  }
+          //  instance = new classType;
+          //  if ('importData' in instance &&
+          //    'function' == typeof instance.importData)
+          //  {
+          //    instance.importData(data);
+          //  } else {
+          //    merge(instance, data);
+          //  }
+          //}
+          //return someObjectCreatedExternally;
         }
-        // then list of values
-        for (var i=0; i<sealedMemberCount; i++) {
-          instance[sealedMemberNames[i]] = deserialize();
+        // only non-external beyond here
+
+        // collect sealed member names
+        for (var i=0; i<traits.sealedMemberCount; i++) {
+          traits.sealedMemberNames.push(readString());
         }
       }
 
-      if (dynamicObject) {
+      // collect sealed member values
+      for (var i=0; i<traits.sealedMemberCount; i++) {
+        instance[traits.sealedMemberNames[i]] = deserialize();
+      }
+
+      if (traits.isDynamicObject) {
         // collect dynamic members
         var property = readString();
-        console.log({
-          pos: pos,
-          objectReference: ref,
-          traits: traits,
-          externalSerialization: externalSerialization,
-          dynamicObject: dynamicObject,
-          sealedMemberCount: sealedMemberCount,
-          clsName: clsName,
-          sealedMemberNames: sealedMemberNames,
-          instance: instance,
-          property: property
-        });
         // key value pairs
         while (property.length) {
           instance[property] = deserialize();
