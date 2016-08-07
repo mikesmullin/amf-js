@@ -1,10 +1,4 @@
-(function(ctx, def) {
-  if ('function' === typeof require && typeof exports === typeof module) {
-    return module.exports = def;
-  }
-  return ctx.AMF = def;
-})(this, (function() {
-
+(() => {
   // Type Markers
 
   // These markers also represent a value.
@@ -331,7 +325,11 @@
       default:
         throw new Error("Unrecognized type marker "+ AMF.hexDump(b) +". Cannot proceed with deserialization.");
     }
-  }
+  };
 
-  return AMF;
-})());
+  if ('function' === typeof define) // Require.JS
+    return define((require, exports, module) => module.exports = AMF);
+  else if ('function' === typeof require && typeof exports === typeof module) // Node.JS
+    return module.exports = AMF;
+  window.AMF = AMF; // Browser
+})();
