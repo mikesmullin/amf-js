@@ -1,4 +1,4 @@
-(() => {
+(function() {
   // Type Markers
 
   // These markers also represent a value.
@@ -328,7 +328,7 @@
   };
 
   if ('function' === typeof define) // Require.JS
-    return define((require, exports, module) => module.exports = AMF);
+    return define(function(require, exports, module) { return module.exports = AMF; });
   else if ('function' === typeof require && typeof exports === typeof module) // Node.JS
     return module.exports = AMF;
   window.AMF = AMF; // Browser
