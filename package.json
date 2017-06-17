@@ -2,7 +2,7 @@
   "name": "amf-js",
   "version": "1.0.0",
   "description": "Automatic Message Format (AMF0 + AMF3-compatible) HTML5 Javascript Library",
-  "main": "index.js",
+  "main": "src/amf.js",
   "scripts": {
     "test": "nodemon --watch ./ --delay 1 --exec 'mocha --reporter spec --bail --ui bdd --colors --timeout 1000 test/*.js'"
   },
