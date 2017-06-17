@@ -122,7 +122,13 @@
 
   proto.readByte = function() {
     var b = new DataView(this.buf)
-      .getUint8(this.pos++, 1);
+      .getUint8(this.pos++);
+    return b;
+  };
+
+  proto.readU32 = function() {
+    var b = new DataView(this.buf)
+      .getUint32(this.pos++, false);
     return b;
   };
 
@@ -315,7 +321,20 @@
       case AMF3_VECTOR_INT:
         throw new Error("vector-int-marker value-type not implemented.");
       case AMF3_VECTOR_UINT:
-        throw new Error("vector-uint-marker value-type not implemented.");
+        if (this.isReference(this.objectReferences)) return this.ref;
+        var length = this.flags; // remaining bits are uint
+        var bytes = new ArrayBuffer(length);
+        var fixed = !!this.readByte(); // U8; 0x00 = not fixed, 0x01 = fixed
+        if (length > 0) {
+          var dv = new DataView(bytes);
+          for (var i=0; i<length; i++) {
+            dv.setUint8(i, this.readU32());
+          }
+          this.objectReferences.push(bytes);
+        }
+        // this Uint32Array isn't necessary but is
+        // nicer for console.log() and JSON.stringify()
+        return new Uint32Array(bytes);
       case AMF3_VECTOR_DOUBLE:
         throw new Error("vector-double-marker value-type not implemented.");
       case AMF3_VECTOR_OBJECT:
