@@ -189,21 +189,26 @@
 
   proto.readArray = function() {
     if (this.isReference(this.objectReferences)) return this.ref;
-    var size = this.flags; // remaining bits are uint
-    var arr = [];
-    this.objectReferences.push(arr);
-
-    var key = this.readString();
-    while (key.length > 0) {
-      arr[key] = this.deserialize();
-      key = this.readString();
+    var denseCount = this.flags; // remaining bits are uint
+    
+    // associative array part
+    var associativeArray = {};
+    var associativeCount = 0;
+    while (true) {
+      var key = this.readString();
+      if (1 > key.length) break;
+      associativeCount++;
+      associativeArray[key] = this.deserialize();
     }
 
-    for (var i=0; i<size; i++) {
-      arr.push(this.deserialize());
+    // dense array part
+    var finalArray = associativeCount > 0 ? associativeArray : new Array(denseCount);
+    for (var i=0; i<denseCount; i++) {
+      finalArray[i] = this.deserialize();
     }
 
-    return arr;
+    this.objectReferences.push(finalArray);
+    return finalArray;
   };
 
   proto.readObject = function() {
