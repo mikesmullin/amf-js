@@ -339,7 +339,7 @@
         }
         // this Uint32Array isn't necessary but is
         // nicer for console.log() and JSON.stringify()
-        return new Uint32Array(bytes);
+        return new Uint8Array(bytes);
       case AMF3_VECTOR_DOUBLE:
         throw new Error("vector-double-marker value-type not implemented.");
       case AMF3_VECTOR_OBJECT:
