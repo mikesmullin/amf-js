@@ -211,6 +211,25 @@
     return finalArray;
   };
 
+
+  proto.readVector = function(isObject) {
+    if (this.isReference(this.objectReferences)) return this.ref;
+    var length = this.flags;
+    var fixed = !!this.readByte(); // U8; 0x00 = not fixed, 0x01
+
+    if(!!isObject) var vectorType = this.readString();
+
+    var finalVector = [];
+    if (length > 0) {
+      for (var i=0; i<length; i++) {
+        finalVector[i] = this.deserialize();
+      }
+    }
+    this.objectReferences.push(finalVector);
+    return finalVector;
+  };
+
+
   proto.readObject = function() {
     if (this.isReference(this.objectReferences)) return this.ref;
     // only object instances beyond here
@@ -324,7 +343,7 @@
       case AMF3_BYTE_ARRAY:
         return this.readByteArray();
       case AMF3_VECTOR_INT:
-        throw new Error("vector-int-marker value-type not implemented.");
+        return this.readVector(false);
       case AMF3_VECTOR_UINT:
         if (this.isReference(this.objectReferences)) return this.ref;
         var length = this.flags; // remaining bits are uint
@@ -341,9 +360,9 @@
         // nicer for console.log() and JSON.stringify()
         return new Uint8Array(bytes);
       case AMF3_VECTOR_DOUBLE:
-        throw new Error("vector-double-marker value-type not implemented.");
+        return this.readVector(false);
       case AMF3_VECTOR_OBJECT:
-        throw new Error("vector-object-marker value-type not implemented.");
+        return this.readVector(true);
       case AMF3_DICTIONARY:
         throw new Error("dictionary-marker value-type not implemented.");
       default:
