@@ -218,6 +218,24 @@
   };
 
 
+  proto.readVectorUINT = function() {
+    if (this.isReference(this.objectReferences)) return this.ref;
+    var length = this.flags; // remaining bits are uint
+    var bytes = new ArrayBuffer(length);
+    var fixed = !!this.readByte(); // U8; 0x00 = not fixed, 0x01 = fixed
+    if (length > 0) {
+      var dv = new DataView(bytes);
+      for (var i=0; i<length; i++) {
+        dv.setUint8(i, this.readU32());
+      }
+      this.objectReferences.push(bytes);
+    }
+    // this Uint32Array isn't necessary but is
+    // nicer for console.log() and JSON.stringify()
+    return new Uint8Array(bytes);
+  }
+
+
   proto.readVector = function(isObject) {
     if (this.isReference(this.objectReferences)) return this.ref;
     var length = this.flags;
@@ -351,20 +369,7 @@
       case AMF3_VECTOR_INT:
         return this.readVector(false);
       case AMF3_VECTOR_UINT:
-        if (this.isReference(this.objectReferences)) return this.ref;
-        var length = this.flags; // remaining bits are uint
-        var bytes = new ArrayBuffer(length);
-        var fixed = !!this.readByte(); // U8; 0x00 = not fixed, 0x01 = fixed
-        if (length > 0) {
-          var dv = new DataView(bytes);
-          for (var i=0; i<length; i++) {
-            dv.setUint8(i, this.readU32());
-          }
-          this.objectReferences.push(bytes);
-        }
-        // this Uint32Array isn't necessary but is
-        // nicer for console.log() and JSON.stringify()
-        return new Uint8Array(bytes);
+        return this.readVectorUINT();
       case AMF3_VECTOR_DOUBLE:
         return this.readVector(false);
       case AMF3_VECTOR_OBJECT:
