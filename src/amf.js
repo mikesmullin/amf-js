@@ -228,8 +228,8 @@
       for (var i=0; i<length; i++) {
         dv.setUint8(i, this.readU32());
       }
-      this.objectReferences.push(bytes);
     }
+    this.objectReferences.push(bytes);
     // this Uint32Array isn't necessary but is
     // nicer for console.log() and JSON.stringify()
     return new Uint8Array(bytes);
@@ -330,8 +330,8 @@
       for (var i=0; i<length; i++) {
         dv.setUint8(i, this.readByte());
       }
-      this.objectReferences.push(bytes);
     }
+    this.objectReferences.push(bytes);
     // this Uint8Array isn't necessary but is
     // nicer for console.log() and JSON.stringify()
     return new Uint8Array(bytes);
