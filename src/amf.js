@@ -192,22 +192,28 @@
     var denseCount = this.flags; // remaining bits are uint
     
     // associative array part
-    var associativeArray = {};
+    var finalArray;
     var associativeCount = 0;
     while (true) {
       var key = this.readString();
       if (1 > key.length) break;
       associativeCount++;
-      associativeArray[key] = this.deserialize();
+      if(associativeCount == 1) {
+        finalArray = {};
+        this.objectReferences.push(finalArray);
+      }
+      finalArray[key] = this.deserialize();
     }
 
     // dense array part
-    var finalArray = associativeCount > 0 ? associativeArray : new Array(denseCount);
+    if(associativeCount == 0) {
+      finalArray = new Array(denseCount);
+      this.objectReferences.push(finalArray);
+    }
     for (var i=0; i<denseCount; i++) {
       finalArray[i] = this.deserialize();
     }
 
-    this.objectReferences.push(finalArray);
     return finalArray;
   };
 
