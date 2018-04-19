@@ -244,12 +244,12 @@
     if(!!isObject) var vectorType = this.readString();
 
     var finalVector = [];
+    this.objectReferences.push(finalVector);
     if (length > 0) {
       for (var i=0; i<length; i++) {
         finalVector[i] = this.deserialize();
       }
     }
-    this.objectReferences.push(finalVector);
     return finalVector;
   };
 
