@@ -192,24 +192,48 @@
     var denseCount = this.flags; // remaining bits are uint
     
     // associative array part
-    var associativeArray = {};
+    var finalArray;
     var associativeCount = 0;
     while (true) {
       var key = this.readString();
       if (1 > key.length) break;
       associativeCount++;
-      associativeArray[key] = this.deserialize();
+      if(associativeCount == 1) {
+        finalArray = {};
+        this.objectReferences.push(finalArray);
+      }
+      finalArray[key] = this.deserialize();
     }
 
     // dense array part
-    var finalArray = associativeCount > 0 ? associativeArray : new Array(denseCount);
+    if(associativeCount == 0) {
+      finalArray = new Array(denseCount);
+      this.objectReferences.push(finalArray);
+    }
     for (var i=0; i<denseCount; i++) {
       finalArray[i] = this.deserialize();
     }
 
-    this.objectReferences.push(finalArray);
     return finalArray;
   };
+
+
+  proto.readVectorUINT = function() {
+    if (this.isReference(this.objectReferences)) return this.ref;
+    var length = this.flags; // remaining bits are uint
+    var bytes = new ArrayBuffer(length);
+    var fixed = !!this.readByte(); // U8; 0x00 = not fixed, 0x01 = fixed
+    if (length > 0) {
+      var dv = new DataView(bytes);
+      for (var i=0; i<length; i++) {
+        dv.setUint8(i, this.readU32());
+      }
+    }
+    this.objectReferences.push(bytes);
+    // this Uint32Array isn't necessary but is
+    // nicer for console.log() and JSON.stringify()
+    return new Uint8Array(bytes);
+  }
 
 
   proto.readVector = function(isObject) {
@@ -220,12 +244,12 @@
     if(!!isObject) var vectorType = this.readString();
 
     var finalVector = [];
+    this.objectReferences.push(finalVector);
     if (length > 0) {
       for (var i=0; i<length; i++) {
         finalVector[i] = this.deserialize();
       }
     }
-    this.objectReferences.push(finalVector);
     return finalVector;
   };
 
@@ -306,8 +330,8 @@
       for (var i=0; i<length; i++) {
         dv.setUint8(i, this.readByte());
       }
-      this.objectReferences.push(bytes);
     }
+    this.objectReferences.push(bytes);
     // this Uint8Array isn't necessary but is
     // nicer for console.log() and JSON.stringify()
     return new Uint8Array(bytes);
@@ -345,20 +369,7 @@
       case AMF3_VECTOR_INT:
         return this.readVector(false);
       case AMF3_VECTOR_UINT:
-        if (this.isReference(this.objectReferences)) return this.ref;
-        var length = this.flags; // remaining bits are uint
-        var bytes = new ArrayBuffer(length);
-        var fixed = !!this.readByte(); // U8; 0x00 = not fixed, 0x01 = fixed
-        if (length > 0) {
-          var dv = new DataView(bytes);
-          for (var i=0; i<length; i++) {
-            dv.setUint8(i, this.readU32());
-          }
-          this.objectReferences.push(bytes);
-        }
-        // this Uint32Array isn't necessary but is
-        // nicer for console.log() and JSON.stringify()
-        return new Uint8Array(bytes);
+        return this.readVectorUINT();
       case AMF3_VECTOR_DOUBLE:
         return this.readVector(false);
       case AMF3_VECTOR_OBJECT:
