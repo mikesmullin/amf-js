@@ -1,6 +1,6 @@
 {
   "name": "amf-js",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Automatic Message Format (AMF0 + AMF3-compatible) HTML5 Javascript Library",
   "main": "src/amf.js",
   "scripts": {
