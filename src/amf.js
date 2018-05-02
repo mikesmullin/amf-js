@@ -235,9 +235,13 @@
       }
     }
     this.objectReferences.push(bytes);
-    // this Uint32Array isn't necessary but is
-    // nicer for console.log() and JSON.stringify()
-    return new Uint8Array(bytes);
+    // return array instead of object
+    var a = new Uint8Array(bytes);
+    var arr = [];
+    for(var p in Object.getOwnPropertyNames(a)) {
+        arr[p] = a[p];
+    }
+    return arr;
   }
 
 
@@ -337,9 +341,13 @@
       }
     }
     this.objectReferences.push(bytes);
-    // this Uint8Array isn't necessary but is
-    // nicer for console.log() and JSON.stringify()
-    return new Uint8Array(bytes);
+    // return array instead of object
+    var a = new Uint8Array(bytes);
+    var arr = [];
+    for(var p in Object.getOwnPropertyNames(a)) {
+        arr[p] = a[p];
+    }
+    return arr;
   };
 
   proto.deserialize = function() {
