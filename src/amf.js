@@ -140,7 +140,7 @@
   };
 
   // Variable-Length Unsigned 29-bit Integer Encoding
-  proto.readInt = function() {
+  proto.readInt = function(signExtend) {
     var result = 0, varLen = 0;
     while (((b = this.readByte()) & 0x80) !== 0 && varLen++ < 3) {
       result <<= 7;
@@ -154,6 +154,11 @@
     //         even though it will probably never receive any.
     result <<= (varLen < 3 ? 7: 8);
     result |= b;
+
+    if( signExtend && (result & 0x10000000) != 0 ) {
+      result |= 0xE0000000;  // add sign extension
+    }
+
     return result;
   };
 
@@ -230,9 +235,13 @@
       }
     }
     this.objectReferences.push(bytes);
-    // this Uint32Array isn't necessary but is
-    // nicer for console.log() and JSON.stringify()
-    return new Uint8Array(bytes);
+    // return array instead of object
+    var a = new Uint8Array(bytes);
+    var arr = [];
+    for(var p in Object.getOwnPropertyNames(a)) {
+        arr[p] = a[p];
+    }
+    return arr;
   }
 
 
@@ -332,9 +341,13 @@
       }
     }
     this.objectReferences.push(bytes);
-    // this Uint8Array isn't necessary but is
-    // nicer for console.log() and JSON.stringify()
-    return new Uint8Array(bytes);
+    // return array instead of object
+    var a = new Uint8Array(bytes);
+    var arr = [];
+    for(var p in Object.getOwnPropertyNames(a)) {
+        arr[p] = a[p];
+    }
+    return arr;
   };
 
   proto.deserialize = function() {
@@ -349,7 +362,7 @@
       case AMF3_TRUE:
         return true;
       case AMF3_INT:
-        return this.readInt();
+        return this.readInt(true);
       case AMF3_DOUBLE:
         return this.readDouble();
       case AMF3_STRING:
