@@ -129,6 +129,9 @@
   proto.readU32 = function() {
     var b = new DataView(this.buf)
       .getUint32(this.pos++, false);
+    this.pos++;
+    this.pos++;
+    this.pos++;
     return b;
   };
 
