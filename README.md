@@ -2,6 +2,8 @@
 
 This project uses the modern Javascript Typed Array specification (e.g, ArrayBuffer, U8intArray, DataView, etc.).
 
+This is currently a decoder only (AMF to JSON); it will not encode (ie. no JSON to AMF)
+
 Designed for browsers or Node.JS.
 
 ## Errata
