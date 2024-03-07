@@ -15,8 +15,9 @@ Designed for browsers or Node.JS.
 ### Everything you need to know about the data structure:
 
 - [AMF0 Spec](http://download.macromedia.com/pub/labs/amf/amf0_spec_121207.pdf)
-- [AMF3 Spec](http://wwwimages.adobe.com/www.adobe.com/content/dam/Adobe/en/devnet/amf/pdf/amf-file-format-spec.pdf)
+- [AMF3 Spec](https://web.archive.org/web/20170713062640/http://wwwimages.adobe.com/www.adobe.com/content/dam/Adobe/en/devnet/amf/pdf/amf-file-format-spec.pdf)
 - [Action Message Format on Wikipedia](https://en.wikipedia.org/wiki/Action_Message_Format)
+- Related: [SWF Spec 19](https://open-flash.github.io/mirrors/swf-spec-19.pdf)
 
 ### Understanding [A]BNF frequently referenced throughout the spec:
 
